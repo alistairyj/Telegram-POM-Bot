@@ -1,0 +1,94 @@
+const TelegramBot = require('node-telegram-bot-api');
+
+// Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual bot token from BotFather
+const token = 'YOUR_TELEGRAM_BOT_TOKEN';
+const bot = new TelegramBot(token, { polling: true });
+
+// This function checks if the user is an admin
+async function isAdmin(chatId, userId) {
+  try {
+    const admins = await bot.getChatAdministrators(chatId);
+    return admins.some(admin => admin.user.id === userId);
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+// Welcome new members
+bot.on('new_chat_members', (msg) => {
+  msg.new_chat_members.forEach((member) => {
+    bot.sendMessage(msg.chat.id, `Welcome, ${member.first_name}!`);
+  });
+});
+
+// Ban command
+bot.onText(/\/ban(@\w+)? (\d+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = parseInt(match[2]);
+
+  if (await isAdmin(chatId, msg.from.id)) {
+    try {
+      await bot.kickChatMember(chatId, userId);
+      bot.sendMessage(chatId, `User has been banned.`);
+    } catch (error) {
+      bot.sendMessage(chatId, `Failed to ban user. Error: ${error.message}`);
+    }
+  } else {
+    bot.sendMessage(chatId, `You are not an admin.`);
+  }
+});
+
+// Mute command
+bot.onText(/\/mute(@\w+)? (\d+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = parseInt(match[2]);
+
+  if (await isAdmin(chatId, msg.from.id)) {
+    try {
+      await bot.restrictChatMember(chatId, userId, { can_send_messages: false });
+      bot.sendMessage(chatId, `User has been muted.`);
+    } catch (error) {
+      bot.sendMessage(chatId, `Failed to mute user. Error: ${error.message}`);
+    }
+  } else {
+    bot.sendMessage(chatId, `You are not an admin.`);
+  }
+});
+
+// Unmute command
+bot.onText(/\/unmute(@\w+)? (\d+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = parseInt(match[2]);
+
+  if (await isAdmin(chatId, msg.from.id)) {
+    try {
+      await bot.restrictChatMember(chatId, userId, { can_send_messages: true });
+      bot.sendMessage(chatId, `User has been unmuted.`);
+    } catch (error) {
+      bot.sendMessage(chatId, `Failed to unmute user. Error: ${error.message}`);
+    }
+  } else {
+    bot.sendMessage(chatId, `You are not an admin.`);
+  }
+});
+
+// Kick command
+bot.onText(/\/kick(@\w+)? (\d+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = parseInt(match[2]);
+
+  if (await isAdmin(chatId, msg.from.id)) {
+    try {
+      await bot.kickChatMember(chatId, userId);
+      bot.unbanChatMember(chatId, userId); // Optional: unban the user to allow them to join again
+      bot.sendMessage(chatId, `User has been kicked.`);
+    } catch (error) {
+      bot.sendMessage(chatId, `Failed to kick user. Error: ${error.message}`);
+    }
+  } else {
+    bot.sendMessage(chatId, `You are not an admin.`);
+  }
+});
+
+console.log('Bot is running...');
